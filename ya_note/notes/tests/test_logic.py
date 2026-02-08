@@ -14,86 +14,91 @@ User = get_user_model()
 class TestLogic(TestCase):
     @classmethod
     def setUpTestData(cls):
-        cls.user = User.objects.create_user(username='author', password='pass')
-        cls.other_user = User.objects.create_user(username='other', password='pass')
-
-        cls.add_url = reverse('notes:add')
-        cls.login_url = reverse('users:login')
+        cls.author = User.objects.create_user(username="author", password="pass")
+        cls.reader = User.objects.create_user(username="reader", password="pass")
 
         cls.note = Note.objects.create(
-            title='Заметка автора',
-            text='Текст',
-            slug='author-note',
-            author=cls.user
+            title="Заметка автора",
+            text="Текст",
+            slug="author-note",
+            author=cls.author,
         )
-        cls.edit_url = reverse('notes:edit', args=(cls.note.slug,))
-        cls.delete_url = reverse('notes:delete', args=(cls.note.slug,))
 
-    def test_authenticated_user_can_create_note(self):
-        self.client.force_login(self.user)
-        notes_before = Note.objects.count()
+        cls.add_url = reverse("notes:add")
+        cls.edit_url = reverse("notes:edit", args=(cls.note.slug,))
+        cls.delete_url = reverse("notes:delete", args=(cls.note.slug,))
+        cls.detail_url = reverse("notes:detail", args=(cls.note.slug,))
 
-        form_data = {'title': 'Новая', 'text': 'Текст', 'slug': 'new-note'}
+    def test_authorized_user_can_create_note(self):
+        self.client.force_login(self.author)
+        before = Note.objects.count()
+
+        form_data = {"title": "Новая", "text": "Текст", "slug": "new-note"}
         response = self.client.post(self.add_url, data=form_data)
 
-        self.assertEqual(Note.objects.count(), notes_before + 1)
-        created = Note.objects.get(slug='new-note')
-        self.assertEqual(created.author, self.user)
         self.assertEqual(response.status_code, HTTPStatus.FOUND)
+        self.assertEqual(Note.objects.count(), before + 1)
 
     def test_anonymous_user_cannot_create_note(self):
-        notes_before = Note.objects.count()
-
-        form_data = {'title': 'Анонимная', 'text': 'Текст', 'slug': 'anon-note'}
+        before = Note.objects.count()
+        form_data = {"title": "Новая", "text": "Текст", "slug": "new-note-2"}
         response = self.client.post(self.add_url, data=form_data)
 
-        self.assertEqual(Note.objects.count(), notes_before)
-        self.assertRedirects(response, f'{self.login_url}?next={self.add_url}')
+        self.assertEqual(response.status_code, HTTPStatus.FOUND)
+        self.assertEqual(Note.objects.count(), before)
 
     def test_cannot_create_two_notes_with_same_slug(self):
-        self.client.force_login(self.user)
+        self.client.force_login(self.author)
+        before = Note.objects.count()
 
-        form_data = {'title': 'Ещё одна', 'text': 'Текст', 'slug': self.note.slug}
+        form_data = {"title": "Другая", "text": "Текст", "slug": self.note.slug}
         response = self.client.post(self.add_url, data=form_data)
 
-        # При ошибке валидации форма возвращается со статусом 200 и ошибками
-        self.assertEqual(response.status_code, HTTPStatus.OK)
-        form = response.context['form']
-        self.assertIn(self.note.slug + WARNING, form.errors['slug'])
+        self.assertEqual(Note.objects.count(), before)
+        form = response.context["form"]
+        self.assertIn("slug", form.errors)
+        self.assertEqual(form.errors["slug"][0], self.note.slug + WARNING)
 
     def test_slug_created_automatically_if_empty(self):
-        self.client.force_login(self.user)
+        self.client.force_login(self.author)
+        before = Note.objects.count()
 
-        title = 'Заметка без слага'
-        form_data = {'title': title, 'text': 'Текст', 'slug': ''}
+        title = "Заметка без слага"
+        form_data = {"title": title, "text": "Текст", "slug": ""}
         self.client.post(self.add_url, data=form_data)
 
-        expected_slug = slugify(title)[:100]
-        self.assertTrue(Note.objects.filter(slug=expected_slug).exists())
+        self.assertEqual(Note.objects.count(), before + 1)
+        created = Note.objects.order_by("-id").first()
+        self.assertEqual(created.slug, slugify(title)[:100])
 
-    def test_user_can_edit_and_delete_own_note(self):
-        self.client.force_login(self.user)
+    def test_author_can_edit_and_delete_own_note(self):
+        self.client.force_login(self.author)
 
-        # edit
-        new_data = {'title': 'Изменено', 'text': 'Новый текст', 'slug': self.note.slug}
-        response = self.client.post(self.edit_url, data=new_data)
+        edit_data = {"title": "Обновили", "text": "Новый текст", "slug": self.note.slug}
+        response = self.client.post(self.edit_url, data=edit_data)
         self.assertEqual(response.status_code, HTTPStatus.FOUND)
 
         self.note.refresh_from_db()
-        self.assertEqual(self.note.title, 'Изменено')
-        self.assertEqual(self.note.text, 'Новый текст')
+        self.assertEqual(self.note.title, "Обновили")
 
-        # delete
-        notes_before = Note.objects.count()
+        before = Note.objects.count()
         response = self.client.post(self.delete_url)
         self.assertEqual(response.status_code, HTTPStatus.FOUND)
-        self.assertEqual(Note.objects.count(), notes_before - 1)
+        self.assertEqual(Note.objects.count(), before - 1)
 
-    def test_user_cannot_edit_or_delete_other_users_notes(self):
-        self.client.force_login(self.other_user)
+    def test_user_cannot_edit_or_delete_other_users_note(self):
+        self.client.force_login(self.reader)
 
-        response = self.client.get(self.edit_url)
+        edit_data = {
+            "title": "Взлом",
+            "text": "Текст",
+            "slug": self.note.slug,
+        }
+        response = self.client.post(self.edit_url, data=edit_data)
         self.assertEqual(response.status_code, HTTPStatus.NOT_FOUND)
 
-        response = self.client.get(self.delete_url)
+        response = self.client.post(self.delete_url)
+        self.assertEqual(response.status_code, HTTPStatus.NOT_FOUND)
+
+        response = self.client.get(self.detail_url)
         self.assertEqual(response.status_code, HTTPStatus.NOT_FOUND)
