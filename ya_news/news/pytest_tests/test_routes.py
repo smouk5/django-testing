@@ -27,13 +27,21 @@ class TestRoutes:
         response = client.get(logout_url)
         assert response.status_code != HTTPStatus.NOT_FOUND
 
-    def test_edit_delete_comment_available_for_author(self, author_client, comment):
+    def test_edit_delete_comment_available_for_author(
+        self,
+        author_client,
+        comment,
+    ):
         for name in ("news:edit", "news:delete"):
             url = reverse(name, args=(comment.id,))
             response = author_client.get(url)
             assert response.status_code == HTTPStatus.OK
 
-    def test_anonymous_redirected_from_edit_delete_to_login(self, client, comment):
+    def test_anonymous_redirected_from_edit_delete_to_login(
+        self,
+        client,
+        comment,
+    ):
         login_url = reverse("users:login")
         for name in ("news:edit", "news:delete"):
             url = reverse(name, args=(comment.id,))
@@ -42,7 +50,9 @@ class TestRoutes:
             assertRedirects(response, expected)
 
     def test_user_cannot_edit_or_delete_other_users_comment(
-        self, reader_client, comment
+        self,
+        reader_client,
+        comment,
     ):
         for name in ("news:edit", "news:delete"):
             url = reverse(name, args=(comment.id,))

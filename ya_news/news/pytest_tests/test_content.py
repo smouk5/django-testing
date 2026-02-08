@@ -16,6 +16,7 @@ class TestContent:
 
         url = reverse("news:home")
         response = client.get(url)
+
         object_list = response.context["object_list"]
         assert len(object_list) <= 10
 
@@ -24,7 +25,11 @@ class TestContent:
         older = News.objects.create(title="Old", text="Text")
         newer = News.objects.create(title="New", text="Text")
 
-        for obj, dt in ((older, now - timedelta(days=1)), (newer, now)):
+        pairs = (
+            (older, now - timedelta(days=1)),
+            (newer, now),
+        )
+        for obj, dt in pairs:
             if hasattr(obj, "date"):
                 obj.date = dt
                 obj.save()
@@ -44,10 +49,22 @@ class TestContent:
 
     def test_comments_sorted_old_to_new_on_detail(self, client, author, news):
         now = timezone.now()
-        old_comment = Comment.objects.create(news=news, author=author, text="old")
-        new_comment = Comment.objects.create(news=news, author=author, text="new")
+        old_comment = Comment.objects.create(
+            news=news,
+            author=author,
+            text="old",
+        )
+        new_comment = Comment.objects.create(
+            news=news,
+            author=author,
+            text="new",
+        )
 
-        for obj, dt in ((old_comment, now - timedelta(hours=1)), (new_comment, now)):
+        pairs = (
+            (old_comment, now - timedelta(hours=1)),
+            (new_comment, now),
+        )
+        for obj, dt in pairs:
             if hasattr(obj, "created"):
                 obj.created = dt
                 obj.save()
@@ -81,5 +98,6 @@ class TestContent:
     def test_authorized_has_comment_form_on_detail(self, author_client, news):
         url = reverse("news:detail", args=(news.id,))
         response = author_client.get(url)
+
         assert "form" in response.context
         assert isinstance(response.context["form"], CommentForm)
