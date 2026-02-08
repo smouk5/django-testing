@@ -43,7 +43,8 @@ class TestLogic:
         assert Comment.objects.count() == before
         assert response.status_code == HTTPStatus.OK
         assert "form" in response.context
-        assert WARNING in response.context["form"].errors["text"][0]
+        error_text = response.context["form"].errors["text"][0]
+        assert WARNING in error_text
 
     def test_author_can_edit_and_delete_own_comment(self, author_client, comment):
         edit_url = reverse("news:edit", args=(comment.id,))
@@ -59,7 +60,9 @@ class TestLogic:
         assert response.status_code in (HTTPStatus.FOUND, HTTPStatus.OK)
         assert Comment.objects.count() == before - 1
 
-    def test_user_cannot_edit_or_delete_other_users_comment(self, reader_client, comment):
+    def test_user_cannot_edit_or_delete_other_users_comment(
+        self, reader_client, comment
+    ):
         edit_url = reverse("news:edit", args=(comment.id,))
         delete_url = reverse("news:delete", args=(comment.id,))
 
