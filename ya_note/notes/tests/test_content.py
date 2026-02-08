@@ -11,9 +11,14 @@ User = get_user_model()
 class TestContent(TestCase):
     @classmethod
     def setUpTestData(cls):
-        cls.author = User.objects.create_user(username="author", password="pass")
-        cls.reader = User.objects.create_user(username="reader", password="pass")
-
+        cls.author = User.objects.create_user(
+            username="author",
+            password="pass",
+        )
+        cls.reader = User.objects.create_user(
+            username="reader",
+            password="pass",
+        )
         cls.note = Note.objects.create(
             title="Заметка автора",
             text="Текст",
@@ -28,21 +33,21 @@ class TestContent(TestCase):
         object_list = response.context["object_list"]
         self.assertIn(self.note, object_list)
 
-    def test_note_not_in_list_for_another_user(self):
+    def test_note_not_in_list_for_reader(self):
         self.client.force_login(self.reader)
         url = reverse("notes:list")
         response = self.client.get(url)
         object_list = response.context["object_list"]
         self.assertNotIn(self.note, object_list)
 
-    def test_create_note_page_contains_form(self):
+    def test_add_page_has_form(self):
         self.client.force_login(self.author)
         url = reverse("notes:add")
         response = self.client.get(url)
         self.assertIn("form", response.context)
         self.assertIsInstance(response.context["form"], NoteForm)
 
-    def test_edit_note_page_contains_form(self):
+    def test_edit_page_has_form(self):
         self.client.force_login(self.author)
         url = reverse("notes:edit", args=(self.note.slug,))
         response = self.client.get(url)
