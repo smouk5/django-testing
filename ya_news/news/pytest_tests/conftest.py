@@ -90,10 +90,6 @@ def delete_url(comment):
 
 @pytest.fixture
 def news_list():
-    """
-    Создаём на 1 новость больше лимита на главной.
-    Даты выставляем через update(), чтобы не зависеть от auto_now_add.
-    """
     now = timezone.now()
     items = []
     for i in range(NEWS_CREATE_COUNT):
@@ -109,9 +105,6 @@ def news_list():
 
 @pytest.fixture
 def comments_list(author, news):
-    """
-    Создаём несколько комментариев и выставляем время через update().
-    """
     now = timezone.now()
     items = []
     for i in range(5):

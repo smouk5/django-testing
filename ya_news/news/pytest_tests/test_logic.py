@@ -1,7 +1,6 @@
 from http import HTTPStatus
 
 import pytest
-from django.urls import reverse
 from pytest_django.asserts import assertRedirects
 
 from news.forms import BAD_WORDS, WARNING
@@ -88,8 +87,8 @@ def test_user_cant_edit_foreign_comment(reader_client, edit_url, comment):
 
 
 def test_user_cant_delete_foreign_comment(reader_client, delete_url, comment):
-    before_count = Comment.objects.count()
+    before = Comment.objects.count()
 
     response = reader_client.post(delete_url)
     assert response.status_code == HTTPStatus.NOT_FOUND
-    assert Comment.objects.count() == before_count
+    assert Comment.objects.count() == before

@@ -16,7 +16,12 @@ pytestmark = pytest.mark.django_db
         ("signup_url", HTTPStatus.OK, lf("client")),
     ),
 )
-def test_public_pages_status(request, url_fixture, expected_status, client_fixture):
+def test_public_pages_status(
+    request,
+    url_fixture,
+    expected_status,
+    client_fixture,
+):
     url = request.getfixturevalue(url_fixture)
     response = client_fixture.get(url)
     assert response.status_code == expected_status
@@ -48,7 +53,12 @@ def test_edit_delete_statuses(
 
 
 @pytest.mark.parametrize("url_fixture", ("edit_url", "delete_url"))
-def test_anon_redirected_to_login(request, client, login_url, url_fixture):
+def test_anon_redirected_to_login(
+    request,
+    client,
+    login_url,
+    url_fixture,
+):
     url = request.getfixturevalue(url_fixture)
     expected = f"{login_url}?next={url}"
     response = client.get(url)
