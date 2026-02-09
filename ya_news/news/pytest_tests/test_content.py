@@ -1,97 +1,45 @@
-from datetime import timedelta
-
 import pytest
-from django.urls import reverse
-from django.utils import timezone
+from django.conf import settings
 
 from news.forms import CommentForm
-from news.models import Comment, News
+
+pytestmark = pytest.mark.django_db
+
+NEWS_LIMIT = settings.NEWS_COUNT_ON_HOME_PAGE
 
 
-@pytest.mark.django_db
-class TestContent:
-    def test_news_count_not_more_than_10(self, client):
-        for i in range(11):
-            News.objects.create(title=f"News {i}", text="Text")
+def test_news_count_limited(client, home_url, news_list):
+    response = client.get(home_url)
+    object_list = list(response.context["object_list"])
+    assert len(object_list) <= NEWS_LIMIT
 
-        url = reverse("news:home")
-        response = client.get(url)
-        object_list = list(response.context["object_list"])
 
-        assert len(object_list) <= 10
+def test_news_sorted_new_to_old(client, home_url, news_list):
+    response = client.get(home_url)
+    object_list = list(response.context["object_list"])
 
-    def test_news_sorted_new_to_old(self, client):
-        now = timezone.now()
-        older = News.objects.create(title="Old", text="Text")
-        newer = News.objects.create(title="New", text="Text")
+    dates = [obj.date for obj in object_list]
+    expected = sorted(dates, reverse=True)
+    assert dates == expected
 
-        pairs = (
-            (older, now - timedelta(days=1)),
-            (newer, now),
-        )
-        for obj, dt in pairs:
-            if hasattr(obj, "date"):
-                obj.date = dt
-            elif hasattr(obj, "created"):
-                obj.created = dt
-            elif hasattr(obj, "pub_date"):
-                obj.pub_date = dt
-            obj.save()
 
-        url = reverse("news:home")
-        response = client.get(url)
-        object_list = list(response.context["object_list"])
+def test_comments_sorted_old_to_new(client, detail_url, comments_list):
+    response = client.get(detail_url)
 
-        assert object_list[0].id == newer.id
-        assert object_list[-1].id == older.id
+    news_obj = response.context["news"]
+    comments = list(news_obj.comment_set.all())
 
-    def test_comments_sorted_old_to_new(self, client, author, news):
-        now = timezone.now()
+    dates = [obj.created for obj in comments]
+    expected = sorted(dates)
+    assert dates == expected
 
-        old_comment = Comment.objects.create(
-            news=news,
-            author=author,
-            text="old",
-        )
-        new_comment = Comment.objects.create(
-            news=news,
-            author=author,
-            text="new",
-        )
 
-        pairs = (
-            (old_comment, now - timedelta(hours=1)),
-            (new_comment, now),
-        )
-        for obj, dt in pairs:
-            if hasattr(obj, "created"):
-                obj.created = dt
-            elif hasattr(obj, "created_at"):
-                obj.created_at = dt
-            elif hasattr(obj, "date"):
-                obj.date = dt
-            obj.save()
+def test_anon_has_no_form(client, detail_url):
+    response = client.get(detail_url)
+    assert "form" not in response.context
 
-        url = reverse("news:detail", args=(news.id,))
-        response = client.get(url)
 
-        if "comments" in response.context:
-            comments = list(response.context["comments"])
-        else:
-            comments = list(response.context["news"].comment_set.all())
-
-        assert comments[0].id == old_comment.id
-        assert comments[-1].id == new_comment.id
-
-    def test_anonymous_has_no_comment_form(self, client, news):
-        url = reverse("news:detail", args=(news.id,))
-        response = client.get(url)
-
-        assert "form" not in response.context
-
-    def test_authorized_has_comment_form(self, author_client, news):
-        url = reverse("news:detail", args=(news.id,))
-        response = author_client.get(url)
-
-        assert "form" in response.context
-        assert isinstance(response.context["form"], CommentForm)
+def test_auth_has_form(author_client, detail_url):
+    response = author_client.get(detail_url)
+    assert "form" in response.context
+    assert isinstance(response.context["form"], CommentForm)
