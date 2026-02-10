@@ -1,5 +1,7 @@
 from http import HTTPStatus
 
+from django.test import TestCase
+
 from notes.tests.base import BaseNoteTestCase
 
 
@@ -34,6 +36,7 @@ class TestRoutes(BaseNoteTestCase):
             self.edit_url,
             self.delete_url,
         )
+
         for url in protected_urls:
             with self.subTest(url=url):
                 response = self.client.get(url)
