@@ -50,5 +50,6 @@ class TestRoutes(BaseNoteTestCase):
                 response = self.client.get(url)
                 self.assertEqual(response.status_code, HTTPStatus.OK)
 
+    def test_logout_available_for_anon(self):
         response = self.client.post(self.logout_url)
         self.assertEqual(response.status_code, HTTPStatus.FOUND)
