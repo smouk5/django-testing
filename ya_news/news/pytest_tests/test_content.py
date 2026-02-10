@@ -10,13 +10,13 @@ NEWS_LIMIT = settings.NEWS_COUNT_ON_HOME_PAGE
 
 def test_news_count_limited(client, home_url, news_list):
     response = client.get(home_url)
-    object_list = list(response.context["object_list"])
-    assert len(object_list) <= NEWS_LIMIT
+    object_list = response.context["object_list"]
+    assert object_list.count() == NEWS_LIMIT
 
 
 def test_news_sorted_new_to_old(client, home_url, news_list):
     response = client.get(home_url)
-    object_list = list(response.context["object_list"])
+    object_list = response.context["object_list"]
 
     dates = [obj.date for obj in object_list]
     expected = sorted(dates, reverse=True)
@@ -25,9 +25,8 @@ def test_news_sorted_new_to_old(client, home_url, news_list):
 
 def test_comments_sorted_old_to_new(client, detail_url, comments_list):
     response = client.get(detail_url)
-
     news_obj = response.context["news"]
-    comments = list(news_obj.comment_set.all())
+    comments = news_obj.comment_set.all()
 
     dates = [obj.created for obj in comments]
     expected = sorted(dates)

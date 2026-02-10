@@ -91,16 +91,12 @@ def delete_url(comment):
 @pytest.fixture
 def news_list():
     now = timezone.now()
-    items = []
     for i in range(NEWS_CREATE_COUNT):
-        item = News.objects.create(title=f"News {i}", text="Text")
-        items.append(item)
-
-    for idx, item in enumerate(items):
-        dt = now - timedelta(minutes=idx)
-        News.objects.filter(pk=item.pk).update(date=dt)
-
-    return items
+        News.objects.create(
+            title=f"News {i}",
+            text="Text",
+            date=now - timedelta(minutes=i),
+        )
 
 
 @pytest.fixture
@@ -118,5 +114,3 @@ def comments_list(author, news):
     for idx, obj in enumerate(items):
         dt = now - timedelta(minutes=(10 - idx))
         Comment.objects.filter(pk=obj.pk).update(created=dt)
-
-    return items

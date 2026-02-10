@@ -55,18 +55,19 @@ def test_bad_words_block_comment(author_client, detail_url, bad_word):
 
 
 def test_author_can_edit_own_comment(author_client, edit_url, comment):
-    old = Comment.objects.get(pk=comment.pk)
+    old_author = comment.author
+    old_news = comment.news
 
     response = author_client.post(edit_url, data={"text": NEW_TEXT})
     assert response.status_code == HTTPStatus.FOUND
 
     updated = Comment.objects.get(pk=comment.pk)
     assert updated.text == NEW_TEXT
-    assert updated.author == old.author
-    assert updated.news == old.news
+    assert updated.author == old_author
+    assert updated.news == old_news
 
 
-def test_author_can_delete_own_comment(author_client, delete_url, comment):
+def test_author_can_delete_own_comment(author_client, delete_url):
     before = Comment.objects.count()
 
     response = author_client.post(delete_url)
@@ -75,18 +76,20 @@ def test_author_can_delete_own_comment(author_client, delete_url, comment):
 
 
 def test_user_cant_edit_foreign_comment(reader_client, edit_url, comment):
-    before = Comment.objects.get(pk=comment.pk)
+    old_text = comment.text
+    old_author = comment.author
+    old_news = comment.news
 
     response = reader_client.post(edit_url, data={"text": NEW_TEXT})
     assert response.status_code == HTTPStatus.NOT_FOUND
 
     after = Comment.objects.get(pk=comment.pk)
-    assert after.text == before.text
-    assert after.author == before.author
-    assert after.news == before.news
+    assert after.text == old_text
+    assert after.author == old_author
+    assert after.news == old_news
 
 
-def test_user_cant_delete_foreign_comment(reader_client, delete_url, comment):
+def test_user_cant_delete_foreign_comment(reader_client, delete_url):
     before = Comment.objects.count()
 
     response = reader_client.post(delete_url)

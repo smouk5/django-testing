@@ -8,20 +8,19 @@ pytestmark = pytest.mark.django_db
 
 
 @pytest.mark.parametrize(
-    "url_fixture, expected_status, client_fixture",
+    "url_fixture, client_fixture, expected_status",
     (
-        ("home_url", HTTPStatus.OK, lf("client")),
-        ("detail_url", HTTPStatus.OK, lf("client")),
-        ("login_url", HTTPStatus.OK, lf("client")),
-        ("signup_url", HTTPStatus.OK, lf("client")),
+        ("home_url", lf("client"), HTTPStatus.OK),
+        ("detail_url", lf("client"), HTTPStatus.OK),
+        ("login_url", lf("client"), HTTPStatus.OK),
+        ("signup_url", lf("client"), HTTPStatus.OK),
+        ("edit_url", lf("author_client"), HTTPStatus.OK),
+        ("delete_url", lf("author_client"), HTTPStatus.OK),
+        ("edit_url", lf("reader_client"), HTTPStatus.NOT_FOUND),
+        ("delete_url", lf("reader_client"), HTTPStatus.NOT_FOUND),
     ),
 )
-def test_public_pages_status(
-    request,
-    url_fixture,
-    expected_status,
-    client_fixture,
-):
+def test_pages_statuses(request, url_fixture, client_fixture, expected_status):
     url = request.getfixturevalue(url_fixture)
     response = client_fixture.get(url)
     assert response.status_code == expected_status
@@ -30,26 +29,6 @@ def test_public_pages_status(
 def test_logout_available_for_anonymous(client, logout_url):
     response = client.post(logout_url)
     assert response.status_code == HTTPStatus.OK
-
-
-@pytest.mark.parametrize(
-    "url_fixture, client_fixture, expected_status",
-    (
-        ("edit_url", lf("author_client"), HTTPStatus.OK),
-        ("delete_url", lf("author_client"), HTTPStatus.OK),
-        ("edit_url", lf("reader_client"), HTTPStatus.NOT_FOUND),
-        ("delete_url", lf("reader_client"), HTTPStatus.NOT_FOUND),
-    ),
-)
-def test_edit_delete_statuses(
-    request,
-    url_fixture,
-    client_fixture,
-    expected_status,
-):
-    url = request.getfixturevalue(url_fixture)
-    response = client_fixture.get(url)
-    assert response.status_code == expected_status
 
 
 @pytest.mark.parametrize("url_fixture", ("edit_url", "delete_url"))
