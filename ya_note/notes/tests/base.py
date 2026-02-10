@@ -48,5 +48,3 @@ class BaseNoteTestCase(TestCase):
 
         cls.reader_client = Client()
         cls.reader_client.force_login(cls.reader)
-
-        cls.anon_client = Client()

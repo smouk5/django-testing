@@ -9,7 +9,8 @@ from notes.tests.base import BaseNoteTestCase
 
 class TestLogic(BaseNoteTestCase):
     def test_auth_can_create_note(self):
-        before = Note.objects.count()
+        Note.objects.all().delete()
+        self.assertEqual(Note.objects.count(), 0)
 
         data = {
             "title": "Новая",
@@ -19,9 +20,9 @@ class TestLogic(BaseNoteTestCase):
         response = self.author_client.post(self.add_url, data=data)
 
         self.assertEqual(response.status_code, HTTPStatus.FOUND)
-        self.assertEqual(Note.objects.count(), before + 1)
+        self.assertEqual(Note.objects.count(), 1)
 
-        created = Note.objects.get(slug="new-note")
+        created = Note.objects.get()
         self.assertEqual(created.title, data["title"])
         self.assertEqual(created.text, data["text"])
         self.assertEqual(created.slug, data["slug"])
@@ -35,7 +36,7 @@ class TestLogic(BaseNoteTestCase):
             "text": "Текст",
             "slug": "new-note-2",
         }
-        response = self.anon_client.post(self.add_url, data=data)
+        response = self.client.post(self.add_url, data=data)
 
         self.assertEqual(response.status_code, HTTPStatus.FOUND)
         self.assertEqual(Note.objects.count(), before)
@@ -57,6 +58,7 @@ class TestLogic(BaseNoteTestCase):
 
     def test_slug_autocreated_if_empty(self):
         Note.objects.all().delete()
+        self.assertEqual(Note.objects.count(), 0)
 
         title = "Заметка без слага"
         data = {
@@ -67,12 +69,13 @@ class TestLogic(BaseNoteTestCase):
         response = self.author_client.post(self.add_url, data=data)
         self.assertEqual(response.status_code, HTTPStatus.FOUND)
 
+        self.assertEqual(Note.objects.count(), 1)
         created = Note.objects.get()
         self.assertEqual(created.title, title)
         self.assertEqual(created.slug, slugify(title))
 
     def test_author_can_edit_own_note(self):
-        before = Note.objects.get(pk=self.note.pk)
+        old_author = self.note.author
 
         data = {
             "title": "Обновили",
@@ -86,7 +89,7 @@ class TestLogic(BaseNoteTestCase):
         self.assertEqual(after.title, data["title"])
         self.assertEqual(after.text, data["text"])
         self.assertEqual(after.slug, data["slug"])
-        self.assertEqual(after.author, before.author)
+        self.assertEqual(after.author, old_author)
 
     def test_author_can_delete_own_note(self):
         before = Note.objects.count()
@@ -96,7 +99,10 @@ class TestLogic(BaseNoteTestCase):
         self.assertEqual(Note.objects.count(), before - 1)
 
     def test_user_cant_edit_foreign_note(self):
-        before = Note.objects.get(pk=self.note.pk)
+        old_title = self.note.title
+        old_text = self.note.text
+        old_slug = self.note.slug
+        old_author = self.note.author
 
         data = {
             "title": "Взлом",
@@ -107,10 +113,10 @@ class TestLogic(BaseNoteTestCase):
         self.assertEqual(response.status_code, HTTPStatus.NOT_FOUND)
 
         after = Note.objects.get(pk=self.note.pk)
-        self.assertEqual(after.title, before.title)
-        self.assertEqual(after.text, before.text)
-        self.assertEqual(after.slug, before.slug)
-        self.assertEqual(after.author, before.author)
+        self.assertEqual(after.title, old_title)
+        self.assertEqual(after.text, old_text)
+        self.assertEqual(after.slug, old_slug)
+        self.assertEqual(after.author, old_author)
 
     def test_user_cant_delete_foreign_note(self):
         before_count = Note.objects.count()
