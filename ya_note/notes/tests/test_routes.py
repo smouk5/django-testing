@@ -34,15 +34,11 @@ class TestRoutes(BaseNoteTestCase):
             self.edit_url,
             self.delete_url,
         )
-
         for url in protected_urls:
             with self.subTest(url=url):
                 response = self.client.get(url)
                 self.assertEqual(response.status_code, HTTPStatus.FOUND)
-                self.assertRedirects(
-                    response,
-                    f"{self.login_url}?next={url}",
-                )
+                self.assertRedirects(response, f"{self.login_url}?next={url}")
 
     def test_auth_pages_available_for_all(self):
         for url in (self.signup_url, self.login_url):
@@ -52,4 +48,5 @@ class TestRoutes(BaseNoteTestCase):
 
     def test_logout_available_for_anon(self):
         response = self.client.post(self.logout_url)
-        self.assertEqual(response.status_code, HTTPStatus.FOUND)
+        self.assertEqual(response.status_code, HTTPStatus.OK)
+        self.assertTemplateUsed(response, "registration/logout.html")
